@@ -1,0 +1,10 @@
+{
+    "positions": {
+        "d05ea12e-d0b4-492b-9495-2886e7db0426": {
+            "name": "CEO",
+            "access_level": 5,
+            "salary": 9876.0
+        }
+    },
+    "employees": []
+}
