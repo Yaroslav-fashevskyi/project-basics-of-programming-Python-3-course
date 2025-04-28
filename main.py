@@ -1,32 +1,33 @@
-#!/usr/bin/env python3
-"""
-Система управління персоналом для невеликих компаній.
-"""
 import datetime
 import json
 import uuid
 import sys
-from dataclasses import dataclass, field
 from typing import List, Dict, Optional
 
 DATA_FILE = "personnel_data.json"
 
-@dataclass
-class Position:
-    id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    name: str = field(default="")
-    access_level: int = 1
-    salary: float = 0.0
 
+class Position:
     ALLOWED_ACCESS_LEVELS = [1, 2, 3, 4, 5]
 
-    def __post_init__(self):
-        # Валідація рівня доступу
+    def __init__(
+        self,
+        name: str,
+        access_level: int = 1,
+        salary: float = 0.0,
+        id: Optional[str] = None
+    ):
+        # Генеруємо id, якщо не передали
+        self.id = id or str(uuid.uuid4())
+        self.name = name.strip()
+        self.access_level = access_level
+        self.salary = salary
+
+        # Валідація
+        if not self.name:
+            raise ValueError("Назва посади не може бути порожньою.")
         if self.access_level not in Position.ALLOWED_ACCESS_LEVELS:
             raise ValueError(f"Рівень доступу має бути одним із {Position.ALLOWED_ACCESS_LEVELS}.")
-        # Валідація назви
-        if not self.name.strip():
-            raise ValueError("Назва посади не може бути порожньою.")
 
     def to_dict(self) -> Dict:
         return {
@@ -39,30 +40,37 @@ class Position:
     @classmethod
     def from_dict(cls, data: Dict) -> "Position":
         return cls(
-            id=data.get("id", str(uuid.uuid4())),
             name=data.get("name", ""),
             access_level=data.get("access_level", 1),
             salary=data.get("salary", 0.0),
+            id=data.get("id")
         )
 
     def __str__(self) -> str:
         return f"{self.name} (ID: {self.id}) – Рівень {self.access_level}, Зарплата {self.salary:.2f}"
 
-@dataclass
-class Employee:
-    id: str = field(default_factory=lambda: str(uuid.uuid4()))
-    first_name: str = field(default="")
-    last_name: str = field(default="")
-    position: Position = None
-    hire_date: datetime.date = None
 
-    def __post_init__(self):
+class Employee:
+    def __init__(
+        self,
+        first_name: str,
+        last_name: str,
+        position: Position,
+        hire_date: datetime.date,
+        id: Optional[str] = None
+    ):
+        self.id = id or str(uuid.uuid4())
+        self.first_name = first_name
+        self.last_name = last_name
+        self.position = position
+        self.hire_date = hire_date
+
         # Валідація імені та прізвища
-        if not Employee.validate_name(self.first_name):
+        if not self.validate_name(self.first_name):
             raise ValueError("Ім'я має містити лише літери та починатися з великої літери.")
-        if not Employee.validate_name(self.last_name):
+        if not self.validate_name(self.last_name):
             raise ValueError("Прізвище має містити лише літери та починатися з великої літери.")
-        # Валідація дати прийняття
+        # Дата не в майбутньому
         if self.hire_date > datetime.date.today():
             raise ValueError("Дата прийняття не може бути в майбутньому.")
 
@@ -80,30 +88,36 @@ class Employee:
         }
 
     @classmethod
-    def from_dict(cls, data: Dict, positions: Dict[str, Position]) -> Optional["Employee"]:
+    def from_dict(
+        cls,
+        data: Dict,
+        positions: Dict[str, Position]
+    ) -> Optional["Employee"]:
+        # парсимо дату
         try:
-            hire_date = datetime.datetime.strptime(data.get("hire_date", ""), "%Y-%m-%d").date()
+            hd = datetime.datetime.strptime(data.get("hire_date", ""), "%Y-%m-%d").date()
         except Exception:
             print(f"Некоректна дата для співробітника {data.get('first_name','?')} {data.get('last_name','?')}")
             return None
-        pos_id = data.get("position_id")
-        pos = positions.get(pos_id)
+        # шукаємо об’єкт Position
+        pos = positions.get(data.get("position_id"))
         if not pos:
-            print(f"Посада з ID {pos_id} не знайдена для {data.get('first_name')} {data.get('last_name')}")
+            print(f"Посада з ID {data.get('position_id')} не знайдена для {data.get('first_name')} {data.get('last_name')}")
             return None
         return cls(
-            id=data.get("id", str(uuid.uuid4())),
             first_name=data.get("first_name", ""),
             last_name=data.get("last_name", ""),
             position=pos,
-            hire_date=hire_date,
+            hire_date=hd,
+            id=data.get("id")
         )
 
     def __str__(self) -> str:
         return (
-            f"{self.first_name} {self.last_name} (ID: {self.id}) | {self.position.name} | "
-            f"Прийнятий: {self.hire_date.isoformat()}"
+            f"{self.first_name} {self.last_name} (ID: {self.id}) | "
+            f"{self.position.name} | Прийнятий: {self.hire_date.isoformat()}"
         )
+
 
 class Payroll:
     """Обробка зарплатних розрахунків"""
@@ -122,9 +136,10 @@ class Payroll:
         return {
             "total_gross": sum(gross_list),
             "total_net": sum(net_list),
-            "average_gross": sum(gross_list)/len(gross_list) if gross_list else 0,
-            "average_net": sum(net_list)/len(net_list) if net_list else 0,
+            "average_gross": sum(gross_list) / len(gross_list) if gross_list else 0,
+            "average_net": sum(net_list) / len(net_list) if net_list else 0,
         }
+
 
 class PersonnelManager:
     """Управління посадами та співробітниками"""
@@ -142,10 +157,10 @@ class PersonnelManager:
             if isinstance(raw_positions, dict):
                 for pid, info in raw_positions.items():
                     pos = Position(
-                        id=pid,
                         name=info.get("name", ""),
                         access_level=info.get("access_level", 1),
-                        salary=info.get("salary", 0.0)
+                        salary=info.get("salary", 0.0),
+                        id=pid
                     )
                     self.positions[pid] = pos
             elif isinstance(raw_positions, list):
@@ -253,10 +268,13 @@ class PersonnelManager:
             print(e)
 
     def search_employees(self, query: str):
-        found = [e for e in self.employees if query.lower() in e.first_name.lower() or query.lower() in e.last_name.lower()]
+        found = [
+            e for e in self.employees
+            if query.lower() in e.first_name.lower() or query.lower() in e.last_name.lower()
+        ]
         print(f"\nЗнайдено {len(found)} співробітників за запитом '{query}':")
         for e in found:
-           print(e)
+            print(e)
 
     def payroll_info(self):
         print("\n--- Зарплатна відомість ---")
@@ -269,7 +287,6 @@ class PersonnelManager:
         for k, v in summary.items():
             print(f"{k.replace('_', ' ').capitalize()}: {v:.2f}")
 
-# Функція для вводу дати
 
 def input_date(prompt: str) -> datetime.date:
     while True:
@@ -279,7 +296,6 @@ def input_date(prompt: str) -> datetime.date:
         except ValueError:
             print("Невірний формат. Використовуйте YYYY-MM-DD.")
 
-# Інтерактивне меню
 
 def main():
     mgr = PersonnelManager()
@@ -303,21 +319,28 @@ def main():
                 except Exception as e:
                     print("Помилка:", e)
             elif sub == "b":
-                for p in mgr.positions.values(): print(p)
+                for p in mgr.positions.values():
+                    print(p)
                 pid = input("ID посади: ")
                 name = input("Нова назва (Enter щоб пропустити): ")
                 lvl = input("Новий рівень (1-5) (Enter щоб пропустити): ")
                 sal = input("Нова зарплата (Enter щоб пропустити): ")
                 kwargs = {}
-                if name: kwargs['name']=name
-                if lvl: kwargs['access_level']=int(lvl)
-                if sal: kwargs['salary']=float(sal)
+                if name:
+                    kwargs['name'] = name
+                if lvl:
+                    kwargs['access_level'] = int(lvl)
+                if sal:
+                    kwargs['salary'] = float(sal)
                 mgr.update_position(pid, **kwargs)
             elif sub == "c":
-                for p in mgr.positions.values(): print(p)
+                for p in mgr.positions.values():
+                    print(p)
                 mgr.delete_position(input("ID посади для видалення: "))
             elif sub == "d":
-                for p in mgr.positions.values(): print(p)
+                for p in mgr.positions.values():
+                    print(p)
+
         elif ch == "2":
             print("a) Додати співробітника\nb) Оновити співробітника\nc) Видалити співробітника\nd) Показати співробітників зі сортуванням")
             sub = input("Вибір: ")
@@ -325,7 +348,8 @@ def main():
                 try:
                     first = input("Ім'я: ")
                     last = input("Прізвище: ")
-                    for p in mgr.positions.values(): print(p)
+                    for p in mgr.positions.values():
+                        print(p)
                     pid = input("ID посади: ")
                     hd = input_date("Дата прийняття (YYYY-MM-DD): ")
                     mgr.add_employee(first, last, pid, hd)
@@ -338,14 +362,20 @@ def main():
                 ln = input("Нове прізвище (Enter щоб пропустити): ")
                 new_hd = input("Нова дата (YYYY-MM-DD) (Enter щоб пропустити): ")
                 hd = None
-                if new_hd: hd = datetime.datetime.strptime(new_hd, "%Y-%m-%d").date()
-                for p in mgr.positions.values(): print(p)
+                if new_hd:
+                    hd = datetime.datetime.strptime(new_hd, "%Y-%m-%d").date()
+                for p in mgr.positions.values():
+                    print(p)
                 npid = input("Новий ID посади (Enter щоб пропустити): ")
                 kwargs = {}
-                if fn: kwargs['first_name']=fn
-                if ln: kwargs['last_name']=ln
-                if hd: kwargs['hire_date']=hd
-                if npid: kwargs['position_id']=npid
+                if fn:
+                    kwargs['first_name'] = fn
+                if ln:
+                    kwargs['last_name'] = ln
+                if hd:
+                    kwargs['hire_date'] = hd
+                if npid:
+                    kwargs['position_id'] = npid
                 mgr.update_employee(eid, **kwargs)
             elif sub == "c":
                 mgr.list_employees()
@@ -353,18 +383,28 @@ def main():
             elif sub == "d":
                 print("Сортувати за: 1-прізвище, 2-посада, 3-дата прийняття")
                 opt = input("Вибір: ")
-                key = "last_name" if opt=="1" else "position" if opt=="2" else "hire_date" if opt=="3" else ""
+                key = (
+                    "last_name" if opt == "1" else
+                    "position" if opt == "2" else
+                    "hire_date" if opt == "3" else
+                    "last_name"
+                )
                 mgr.list_employees(sort_by=key)
+
         elif ch == "3":
             q = input("Пошуковий запит (ім'я чи прізвище): ")
             mgr.search_employees(q)
+
         elif ch == "4":
             mgr.payroll_info()
+
         elif ch == "5":
             print("Вихід...")
             sys.exit(0)
+
         else:
             print("Невірний вибір. Спробуйте знову.")
+
 
 if __name__ == "__main__":
     main()
