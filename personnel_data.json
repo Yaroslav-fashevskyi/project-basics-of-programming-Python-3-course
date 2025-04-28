@@ -4,6 +4,11 @@
             "name": "CEO",
             "access_level": 5,
             "salary": 9876.0
+        },
+        "6f0a539e-dbe5-42a2-b8fa-34e32f594254": {
+            "name": "CT0",
+            "access_level": 2,
+            "salary": 1288.0
         }
     },
     "employees": []
