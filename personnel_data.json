@@ -1,15 +1,26 @@
 {
-    "positions": {
-        "d05ea12e-d0b4-492b-9495-2886e7db0426": {
-            "name": "CEO",
-            "access_level": 5,
-            "salary": 9876.0
-        },
-        "6f0a539e-dbe5-42a2-b8fa-34e32f594254": {
+    "positions": [
+        {
+            "id": "6f0a539e-dbe5-42a2-b8fa-34e32f594254",
             "name": "CT0",
             "access_level": 2,
             "salary": 1288.0
         }
-    },
-    "employees": []
+    ],
+    "employees": [
+        {
+            "id": "86326a48-fda5-46cb-ad09-ea2ef9e0e0d5",
+            "first_name": "Ярослав",
+            "last_name": "Фашевський",
+            "position_id": "6f0a539e-dbe5-42a2-b8fa-34e32f594254",
+            "hire_date": "2025-05-02"
+        },
+        {
+            "id": "9834524c-baf8-4b6e-acc4-b0c0cf4faf79",
+            "first_name": "Ярослав",
+            "last_name": "Фашевський",
+            "position_id": "6f0a539e-dbe5-42a2-b8fa-34e32f594254",
+            "hire_date": "2024-12-02"
+        }
+    ]
 }
