@@ -4,7 +4,13 @@
             "id": "6f0a539e-dbe5-42a2-b8fa-34e32f594254",
             "name": "CT0",
             "access_level": 2,
-            "salary": 1288.0
+            "salary": 87654.0
+        },
+        {
+            "id": "e9ac43ff-c01f-43d6-b8e8-0360b7dd2e36",
+            "name": "Сапорт",
+            "access_level": 1,
+            "salary": 766.0
         }
     ],
     "employees": [
@@ -14,13 +20,6 @@
             "last_name": "Фашевський",
             "position_id": "6f0a539e-dbe5-42a2-b8fa-34e32f594254",
             "hire_date": "2025-05-02"
-        },
-        {
-            "id": "9834524c-baf8-4b6e-acc4-b0c0cf4faf79",
-            "first_name": "Ярослав",
-            "last_name": "Фашевський",
-            "position_id": "6f0a539e-dbe5-42a2-b8fa-34e32f594254",
-            "hire_date": "2024-12-02"
         }
     ]
 }

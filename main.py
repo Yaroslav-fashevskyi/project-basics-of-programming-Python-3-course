@@ -22,7 +22,8 @@ def positions_menu(mgr: PersonnelManager) -> None:
         print("1. Додати посаду")
         print("2. Показати всі посади")
         print("3. Видалити посаду")
-        print("4. Повернутися в головне меню")
+        print("4. Оновити інформацію про посаду")
+        print("5. Повернутися в головне меню")
         choice = input("Вибір: ").strip()
 
         if choice == "1":
@@ -31,7 +32,6 @@ def positions_menu(mgr: PersonnelManager) -> None:
             salary = float(input("Зарплата: ").strip())
             try:
                 mgr.add_position(name, access, salary)
-                print("Посада додана.")
             except ValueError as e:
                 print(f"Помилка: {e}")
 
@@ -44,11 +44,34 @@ def positions_menu(mgr: PersonnelManager) -> None:
             pid = input("ID посади для видалення: ").strip()
             try:
                 mgr.delete_position(pid)
-                print("Посаду видалено.")
             except ValueError as e:
                 print(f"Помилка: {e}")
 
         elif choice == "4":
+            pid = input("ID посади для оновлення: ").strip()
+            print("Що оновити?")
+            print("1. Назва")
+            print("2. Рівень доступу")
+            print("3. Зарплата")
+            field = input("Вибір поля: ").strip()
+            kwargs = {}
+            try:
+                if field == "1":
+                    kwargs["name"] = input("Нова назва: ").strip()
+                elif field == "2":
+                    kwargs["access_level"] = int(
+                        input("Новий рівень доступу (1–5): ").strip()
+                    )
+                elif field == "3":
+                    kwargs["salary"] = float(input("Нова зарплата: ").strip())
+                else:
+                    print("Невірний вибір.")
+                    continue
+                mgr.update_position(pid, **kwargs)
+            except ValueError as e:
+                print(f"Помилка: {e}")
+
+        elif choice == "5":
             break
 
         else:
@@ -61,7 +84,9 @@ def employees_menu(mgr: PersonnelManager) -> None:
         print("1. Додати співробітника")
         print("2. Показати всіх співробітників")
         print("3. Видалити співробітника")
-        print("4. Повернутися в головне меню")
+        print("4. Оновити інформацію про співробітника")
+        print("5. Показати співробітників з сортуванням")
+        print("6. Повернутися в головне меню")
         choice = input("Вибір: ").strip()
 
         if choice == "1":
@@ -74,28 +99,63 @@ def employees_menu(mgr: PersonnelManager) -> None:
             date = input_date("Дата прийняття (YYYY-MM-DD): ")
             try:
                 mgr.add_employee(first, last, pid, date)
-                print("Співробітника додано.")
             except ValueError as e:
                 print(f"Помилка: {e}")
 
         elif choice == "2":
-            # просто показати всіх співробітників у порядку додавання
-            if not mgr.employees:
-                print("Список співробітників порожній.")
-            else:
-                print("\nСписок усіх співробітників:")
-                for e in mgr.employees:
-                    print(e)
+            for e in mgr.employees:
+                print(e)
 
         elif choice == "3":
             eid = input("ID співробітника для видалення: ").strip()
             try:
                 mgr.delete_employee(eid)
-                print("Співробітника видалено.")
             except ValueError as e:
                 print(f"Помилка: {e}")
 
         elif choice == "4":
+            eid = input("ID співробітника для оновлення: ").strip()
+            print("Що оновити?")
+            print("1. Ім'я")
+            print("2. Прізвище")
+            print("3. Посада")
+            print("4. Дата прийняття")
+            field = input("Вибір поля: ").strip()
+            kwargs = {}
+            try:
+                if field == "1":
+                    kwargs["first_name"] = input("Нове ім'я: ").strip()
+                elif field == "2":
+                    kwargs["last_name"] = input("Нове прізвище: ").strip()
+                elif field == "3":
+                    print("Доступні посади:")
+                    for pos in mgr.positions.values():
+                        print(f"{pos.id} – {pos.name}")
+                    kwargs["position_id"] = input("Новий ID посади: ").strip()
+                elif field == "4":
+                    kwargs["hire_date"] = input_date(
+                        "Нова дата прийняття (YYYY-MM-DD): "
+                    )
+                else:
+                    print("Невірний вибір поля.")
+                    continue
+
+                mgr.update_employee(eid, **kwargs)
+            except ValueError as e:
+                print(f"Помилка: {e}")
+
+        elif choice == "5":
+            print("Сортувати за:")
+            print("1. Прізвище")
+            print("2. Посада")
+            print("3. Дата прийняття")
+            sel = input("Вибір: ").strip()
+            key_map = {"1": "last_name", "2": "position", "3": "hire_date"}
+            sort_by = key_map.get(sel, "last_name")
+            for e in mgr.list_employees(sort_by=sort_by):
+                print(e)
+
+        elif choice == "6":
             break
 
         else:
@@ -111,76 +171,52 @@ def main() -> None:
 
         if choice == "1":
             positions_menu(mgr)
-
         elif choice == "2":
             employees_menu(mgr)
-
         elif choice == "3":
-            # 1) вибір поля для пошуку
+            # Пошук
             print(
                 """
 Оберіть, за чим шукати:
 1 – Ім'я
 2 – Прізвище
 3 – Посада
-4 – Дата прийняття на роботу
+4 – Дата прийняття
             """
             )
             field_sel = input("Вибір: ").strip()
             if field_sel not in {"1", "2", "3", "4"}:
-                print("Невірний вибір, повертаємось у меню.")
+                print("Невірний вибір.")
                 continue
-
-            # 2) отримуємо сам запит
             if field_sel == "4":
-                # для дати використовуємо input_date
-                date_query = input_date("Введіть дату прийняття (YYYY-MM-DD): ")
-                found = [e for e in mgr.employees if e.hire_date == date_query]
+                q = input_date("Дата прийняття (YYYY-MM-DD): ")
+                found = [e for e in mgr.employees if e.hire_date == q]
             else:
-                prompts = {
-                    "1": "Введіть ім'я для пошуку: ",
-                    "2": "Введіть прізвище для пошуку: ",
-                    "3": "Введіть назву посади для пошуку: ",
-                }
-                query = input(prompts[field_sel]).strip()
-                if not query:
-                    print("Пошук відмінено.")
-                    continue
-
+                prompts = {"1": "ім'я", "2": "прізвище", "3": "посаду"}
+                query = input(f"Введіть {prompts[field_sel]}: ").strip().lower()
                 if field_sel == "1":
-                    found = [
-                        e
-                        for e in mgr.employees
-                        if query.lower() in e.first_name.lower()
-                    ]
+                    found = [e for e in mgr.employees if query in e.first_name.lower()]
                 elif field_sel == "2":
+                    found = [e for e in mgr.employees if query in e.last_name.lower()]
+                else:
                     found = [
-                        e for e in mgr.employees if query.lower() in e.last_name.lower()
+                        e for e in mgr.employees if query in e.position.name.lower()
                     ]
-                else:  # поле 3 – посада
-                    found = [
-                        e
-                        for e in mgr.employees
-                        if query.lower() in e.position.name.lower()
-                    ]
-
-            # 3) вивід результатів
             if not found:
-                print("Нічого не знайдено за запитом.")
+                print("Нічого не знайдено.")
             else:
-                print(f"\nЗнайдено {len(found)} співробітників:")
-                for emp in found:
-                    print(emp)
+                for e in found:
+                    print(e)
 
         elif choice == "4":
             mgr.payroll_info()
 
         elif choice == "5":
-            print("Завершення роботи.")
+            print("Вихід.")
             sys.exit(0)
 
         else:
-            print("Невірний вибір, спробуйте ще раз.")
+            print("Невірний вибір.")
 
 
 if __name__ == "__main__":
